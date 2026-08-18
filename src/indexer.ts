@@ -25,6 +25,21 @@ const IMPORT_QUERIES: Record<string, string> = {
   '.go': '(import_spec path: (interpreted_string_literal) @module)',
 };
 
+// Some tree-sitter grammar packages export { languageName: Language } (e.g.
+// tree-sitter-typescript -> { typescript, tsx }) instead of the language
+// object itself. Unwrap until we get something setLanguage() accepts.
+function resolveLanguage(mod: any): any {
+  if (!mod) return mod;
+  if (typeof mod.name === 'string') return mod; // already a Language object
+  if (typeof mod === 'object') {
+    for (const key of Object.keys(mod)) {
+      const candidate = mod[key];
+      if (candidate && typeof candidate.name === 'string') return candidate;
+    }
+  }
+  return mod;
+}
+
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', 'target', 'vendor']);
 
 function shouldIgnore(filePath: string): boolean {
@@ -88,7 +103,7 @@ export async function buildIndex(rootDir: string): Promise<IndexData> {
       const stat = fs.statSync(fullPath);
 
       const parser = new Parser();
-      parser.setLanguage(langConfig.parser);
+      parser.setLanguage(resolveLanguage(langConfig.parser));
 
       const symbols = extractSymbols(parser, content, ext);
       const imports = extractImports(parser, content, ext);
