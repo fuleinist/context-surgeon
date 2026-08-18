@@ -65,4 +65,23 @@ function makeIndex(files) {
         const results = (0, scorer_1.scoreFiles)(index, 'authentication');
         (0, vitest_1.expect)(results[0].file).toBe('new.ts');
     });
+    (0, vitest_1.it)('boosts files imported by relevant files (graph proximity)', () => {
+        const index = makeIndex([
+            // Relevant: matches task keywords directly
+            makeFile({
+                path: 'src/auth.ts',
+                content: 'function authenticate() {}',
+                symbols: [{ name: 'authenticate', kind: 'function', line: 1 }],
+                imports: ['./token-store'],
+            }),
+            // No keyword match, but imported by the relevant file
+            makeFile({ path: 'src/token-store.ts', content: 'unrelated plumbing code' }),
+            // Also no keyword match, not imported anywhere
+            makeFile({ path: 'src/unrelated.ts', content: 'unrelated plumbing code' }),
+        ]);
+        const results = (0, scorer_1.scoreFiles)(index, 'authentication flow');
+        const byFile = Object.fromEntries(results.map(r => [r.file, r]));
+        (0, vitest_1.expect)(byFile['src/token-store.ts'].score).toBeGreaterThan(byFile['src/unrelated.ts'].score);
+        (0, vitest_1.expect)(byFile['src/token-store.ts'].reasons.join(' ')).toContain('imported by');
+    });
 });

@@ -72,4 +72,24 @@ describe('scoreFiles', () => {
     const results = scoreFiles(index, 'authentication');
     expect(results[0].file).toBe('new.ts');
   });
+
+  it('boosts files imported by relevant files (graph proximity)', () => {
+    const index = makeIndex([
+      // Relevant: matches task keywords directly
+      makeFile({
+        path: 'src/auth.ts',
+        content: 'function authenticate() {}',
+        symbols: [{ name: 'authenticate', kind: 'function', line: 1 }],
+        imports: ['./token-store'],
+      }),
+      // No keyword match, but imported by the relevant file
+      makeFile({ path: 'src/token-store.ts', content: 'unrelated plumbing code' }),
+      // Also no keyword match, not imported anywhere
+      makeFile({ path: 'src/unrelated.ts', content: 'unrelated plumbing code' }),
+    ]);
+    const results = scoreFiles(index, 'authentication flow');
+    const byFile = Object.fromEntries(results.map(r => [r.file, r]));
+    expect(byFile['src/token-store.ts'].score).toBeGreaterThan(byFile['src/unrelated.ts'].score);
+    expect(byFile['src/token-store.ts'].reasons.join(' ')).toContain('imported by');
+  });
 });

@@ -9,7 +9,7 @@ function extractTaskKeywords(task: string): string[] {
   return tokenize(task).filter(w => !stopWords.has(w) && w.length > 2);
 }
 
-function scoreFile(file: FileEntry, keywords: string[], allFiles: FileEntry[]): { score: number; reasons: string[] } {
+function baseScore(file: FileEntry, keywords: string[]): { score: number; reasons: string[] } {
   const reasons: string[] = [];
   let score = 0;
 
@@ -38,15 +38,6 @@ function scoreFile(file: FileEntry, keywords: string[], allFiles: FileEntry[]): 
     reasons.push(`${matchingSymbols.length} matching symbols`);
   }
 
-  // Graph proximity: files imported by already-relevant files
-  const importedBy = allFiles.filter(f =>
-    f.imports.some(imp => imp.includes(file.path.replace(/\.[^.]+$/, '')))
-  );
-  if (importedBy.length > 0) {
-    score += importedBy.length * 3;
-    reasons.push(`imported by ${importedBy.length} files`);
-  }
-
   // Recency boost (files modified in last 7 days)
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   if (file.mtime > weekAgo) {
@@ -70,15 +61,42 @@ function scoreFile(file: FileEntry, keywords: string[], allFiles: FileEntry[]): 
   return { score: Math.max(0, score), reasons };
 }
 
+// Normalize a file path (minus extension) into a forward-slash stem so it
+// can be matched against import specifiers, which always use forward slashes.
+function importKey(filePath: string): string {
+  return filePath.replace(/\.[^.]+$/, '').replace(/\\/g, '/');
+}
+
 export function scoreFiles(index: IndexData, task: string): ScoreResult[] {
   const keywords = extractTaskKeywords(task);
   if (keywords.length === 0) {
     return index.files.map(f => ({ file: f.path, score: 0, reasons: ['no extractable keywords'] }));
   }
 
-  return index.files
-    .map(file => {
-      const { score, reasons } = scoreFile(file, keywords, index.files);
+  // Pass 1: base scores (keywords, symbols, recency, penalties).
+  const base = index.files.map(file => ({ file, ...baseScore(file, keywords) }));
+
+  // Pass 2: graph proximity — boost files imported by already-relevant files.
+  return base
+    .map(({ file, score, reasons }) => {
+      const key = importKey(file.path);
+      let boost = 0;
+      let relevantImporters = 0;
+      for (const other of base) {
+        if (other.file === file || other.score <= 0) continue;
+        if (!other.file.imports.some(imp => {
+          const spec = imp.replace(/['"]/g, '');
+          const base = key.split('/').pop()!;
+          return spec.includes(key) || spec.split('/').pop() === base;
+        })) continue;
+        relevantImporters++;
+        boost += Math.min(Math.ceil(other.score / 5), 5);
+        if (boost >= 15) { boost = 15; break; }
+      }
+      if (relevantImporters > 0) {
+        score += boost;
+        reasons.push(`imported by ${relevantImporters} relevant file${relevantImporters > 1 ? 's' : ''}`);
+      }
       return { file: file.path, score, reasons };
     })
     .sort((a, b) => b.score - a.score);
