@@ -2,3 +2,4 @@ node_modules/
 dist/
 .context-surgeon/
 *.log
+.context-surgeon/

@@ -48,7 +48,12 @@ function generatePack(index, scores, maxTokens) {
     lines.push(`Generated: ${new Date().toISOString()}`);
     lines.push(`Token budget: ${maxTokens}`);
     lines.push('');
-    for (const score of scores) {
+    // Defensive: ensure descending score order regardless of caller
+    const ranked = [...scores].sort((a, b) => b.score - a.score);
+    // Greedy fill: skip files that don't fit the remaining budget and keep
+    // trying smaller ones, rather than stopping at the first oversized file.
+    const bodyLines = [];
+    for (const score of ranked) {
         if (score.score === 0)
             continue;
         const file = fileMap.get(score.file);
@@ -56,37 +61,38 @@ function generatePack(index, scores, maxTokens) {
             continue;
         const fileTokens = file.tokenCount;
         if (tokensUsed + fileTokens > maxTokens && includedFiles.length > 0)
-            break;
-        lines.push(`## ${file.path}`);
+            continue;
+        bodyLines.push(`## ${file.path}`);
         lines.push('');
-        lines.push(`**Score:** ${score.score} | **Tokens:** ~${fileTokens}`);
-        lines.push('');
+        bodyLines.push(`**Score:** ${score.score} | **Tokens:** ~${fileTokens}`);
+        bodyLines.push('');
         // For small files, include full content; for large files, include symbols + imports
         if (fileTokens < 500) {
-            lines.push('```' + file.language);
-            lines.push(file.content);
-            lines.push('```');
+            bodyLines.push('```' + file.language);
+            bodyLines.push(file.content);
+            bodyLines.push('```');
         }
         else {
-            lines.push('### Symbols');
-            lines.push('```');
+            bodyLines.push('### Symbols');
+            bodyLines.push('```');
             for (const sym of file.symbols) {
-                lines.push(`  ${sym.kind}: ${sym.name} (line ${sym.line})`);
+                bodyLines.push(`  ${sym.kind}: ${sym.name} (line ${sym.line})`);
             }
-            lines.push('```');
+            bodyLines.push('```');
             if (file.imports.length > 0) {
-                lines.push('### Imports');
-                lines.push('```');
+                bodyLines.push('### Imports');
+                bodyLines.push('```');
                 for (const imp of file.imports) {
-                    lines.push(`  ${imp}`);
+                    bodyLines.push(`  ${imp}`);
                 }
-                lines.push('```');
+                bodyLines.push('```');
             }
         }
-        lines.push('');
+        bodyLines.push('');
         tokensUsed += fileTokens;
         includedFiles.push(file.path);
     }
+    lines.push(...bodyLines);
     lines.push('---');
     lines.push(`Files: ${includedFiles.length}/${index.files.length} | Tokens: ~${tokensUsed}/${maxTokens}`);
     return {

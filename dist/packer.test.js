@@ -55,6 +55,45 @@ function makeFile(path, content, tokenCount) {
         (0, vitest_1.expect)(pack.files).toContain('big.ts');
         (0, vitest_1.expect)(pack.files).not.toContain('small.ts');
     });
+    (0, vitest_1.it)('greedy-fills: skips oversized files and includes smaller later ones', () => {
+        const index = {
+            version: '0.1.0',
+            createdAt: new Date().toISOString(),
+            rootDir: '.',
+            files: [
+                makeFile('a.ts', 'code a', 100),
+                makeFile('huge.ts', 'x'.repeat(4000), 1000),
+                makeFile('c.ts', 'code c', 40),
+            ],
+            totalTokens: 1140,
+        };
+        const scores = [
+            { file: 'a.ts', score: 50, reasons: [] },
+            { file: 'huge.ts', score: 40, reasons: [] },
+            { file: 'c.ts', score: 30, reasons: [] },
+        ];
+        const pack = (0, packer_1.generatePack)(index, scores, 150);
+        (0, vitest_1.expect)(pack.files).toEqual(['a.ts', 'c.ts']);
+        (0, vitest_1.expect)(pack.totalTokens).toBe(140);
+    });
+    (0, vitest_1.it)('sorts unsorted scores descending before packing', () => {
+        const index = {
+            version: '0.1.0',
+            createdAt: new Date().toISOString(),
+            rootDir: '.',
+            files: [
+                makeFile('low.ts', 'code', 10),
+                makeFile('high.ts', 'code', 10),
+            ],
+            totalTokens: 20,
+        };
+        const scores = [
+            { file: 'low.ts', score: 10, reasons: [] },
+            { file: 'high.ts', score: 90, reasons: [] },
+        ];
+        const pack = (0, packer_1.generatePack)(index, scores, 100);
+        (0, vitest_1.expect)(pack.files).toEqual(['high.ts', 'low.ts']);
+    });
     (0, vitest_1.it)('skips files with zero score', () => {
         const index = {
             version: '0.1.0',
