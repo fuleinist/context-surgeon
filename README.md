@@ -30,7 +30,7 @@ cs stats
 
 ## How it works
 
-1. **Index** — walks your repo, parses files with tree-sitter (TypeScript, Python, Rust, Go), extracts symbols and imports
+1. **Index** - walks your repo, parses files with tree-sitter (TypeScript, Python, Rust, Go, Java), extracts symbols and imports
 2. **Score** — ranks files by keyword match, symbol overlap, graph proximity (imports), and recency
 3. **Pack** — selects top files until token budget is hit, outputs a single markdown file ready to paste into your agent
 
@@ -51,7 +51,7 @@ src/
 - [ ] Embedding-based semantic scoring (v2)
 - [ ] VS Code extension (v2)
 - [ ] Watch mode / incremental indexing (v2)
-- [ ] More language support (Java, C#, Ruby)
+- [ ] More language support (C#, Ruby)
 - [ ] Config file (`.context-surgeon/config.json`)
 
 ## License

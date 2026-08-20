@@ -6,6 +6,7 @@ import TS from 'tree-sitter-typescript';
 import Python from 'tree-sitter-python';
 import Rust from 'tree-sitter-rust';
 import Go from 'tree-sitter-go';
+import Java from 'tree-sitter-java';
 import { FileEntry, IndexData, SymbolInfo } from './types';
 import { estimateTokens } from './token-counter';
 
@@ -15,6 +16,7 @@ const LANGUAGE_MAP: Record<string, { parser: any; query: string }> = {
   '.py': { parser: Python, query: '(function_definition name: (identifier) @name) (class_definition name: (identifier) @name)' },
   '.rs': { parser: Rust, query: '(function_item name: (identifier) @name) (struct_item name: (type_identifier) @name) (impl_item type: (type_identifier) @name)' },
   '.go': { parser: Go, query: '(function_declaration name: (identifier) @name) (type_declaration (type_spec name: (type_identifier) @name))' },
+  '.java': { parser: Java, query: '(method_declaration name: (identifier) @name) (class_declaration name: (identifier) @name) (interface_declaration name: (identifier) @name)' },
 };
 
 const IMPORT_QUERIES: Record<string, string> = {
@@ -23,6 +25,7 @@ const IMPORT_QUERIES: Record<string, string> = {
   '.py': '(import_from_statement module_name: (dotted_name (identifier) @module)) (import_statement name: (dotted_name (identifier) @module))',
   '.rs': '(use_declaration argument: (scoped_identifier path: (identifier) @module))',
   '.go': '(import_spec path: (interpreted_string_literal) @module)',
+  '.java': '(import_declaration (scoped_identifier) @module)',
 };
 
 // Some tree-sitter grammar packages export { languageName: Language } (e.g.

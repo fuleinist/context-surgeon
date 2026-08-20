@@ -48,6 +48,7 @@ const tree_sitter_typescript_1 = __importDefault(require("tree-sitter-typescript
 const tree_sitter_python_1 = __importDefault(require("tree-sitter-python"));
 const tree_sitter_rust_1 = __importDefault(require("tree-sitter-rust"));
 const tree_sitter_go_1 = __importDefault(require("tree-sitter-go"));
+const tree_sitter_java_1 = __importDefault(require("tree-sitter-java"));
 const token_counter_1 = require("./token-counter");
 const LANGUAGE_MAP = {
     '.ts': { parser: tree_sitter_typescript_1.default, query: '(function_declaration name: (identifier) @name) (class_declaration name: (type_identifier) @name) (interface_declaration name: (type_identifier) @name)' },
@@ -55,6 +56,7 @@ const LANGUAGE_MAP = {
     '.py': { parser: tree_sitter_python_1.default, query: '(function_definition name: (identifier) @name) (class_definition name: (identifier) @name)' },
     '.rs': { parser: tree_sitter_rust_1.default, query: '(function_item name: (identifier) @name) (struct_item name: (type_identifier) @name) (impl_item type: (type_identifier) @name)' },
     '.go': { parser: tree_sitter_go_1.default, query: '(function_declaration name: (identifier) @name) (type_declaration (type_spec name: (type_identifier) @name))' },
+    '.java': { parser: tree_sitter_java_1.default, query: '(method_declaration name: (identifier) @name) (class_declaration name: (identifier) @name) (interface_declaration name: (identifier) @name)' },
 };
 const IMPORT_QUERIES = {
     '.ts': '(import_statement source: (string) @module)',
@@ -62,6 +64,7 @@ const IMPORT_QUERIES = {
     '.py': '(import_from_statement module_name: (dotted_name (identifier) @module)) (import_statement name: (dotted_name (identifier) @module))',
     '.rs': '(use_declaration argument: (scoped_identifier path: (identifier) @module))',
     '.go': '(import_spec path: (interpreted_string_literal) @module)',
+    '.java': '(import_declaration (scoped_identifier) @module)',
 };
 // Some tree-sitter grammar packages export { languageName: Language } (e.g.
 // tree-sitter-typescript -> { typescript, tsx }) instead of the language
